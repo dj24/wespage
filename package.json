@@ -2,7 +2,9 @@
   "name": "wespage",
   "version": "0.0.49",
   "dependencies": {
+    "@react-three/drei": "^9.17.1",
     "@react-three/fiber": "^8.1.0",
+    "@types/three": "^0.141.0",
     "framer-motion-3d": "^6.5.0",
     "prettier": "^2.7.1",
     "react": "^18.2.0",
