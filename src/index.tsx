@@ -1,17 +1,31 @@
 import ReactDOM from "react-dom/client";
-import { Suspense } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { motion } from "framer-motion-3d";
 import { useScroll } from "framer-motion";
 import { Canvas, useThree, useLoader } from "@react-three/fiber";
-import { useFBX } from "@react-three/drei";
-import { FBXLoader } from "../node_modules/three/examples/jsm/loaders/FBXLoader";
 
 import "./index.css";
+import { GLTFLoader } from "../node_modules/three/examples/jsm/loaders/GLTFLoader";
+
+const FOV = 10;
+const ROOM_WIDTH = 10;
+const ROOM_DEPTH = 5;
+const ROOM_HEIGHT = 8;
+const WALL_THICKNESS = 0.25;
+const WALL_COLOUR = "red";
+const ROOM_Z_POSITION = -1;
 
 const Model = (props) => {
-  // const fbx = useFBX("/models/LeatherChair.fbx");
-  const fbx = useLoader(FBXLoader, "models/LeatherChair.fbx");
-  return <primitive object={fbx} />;
+  const gltf = useLoader(GLTFLoader, "public/models/scene.gltf");
+  return (
+    <primitive
+      object={gltf.scene}
+      rotation={[0, 3, 0]}
+      position={[0, 0, 0]}
+      scale={[0.5, 0.5, 0.5]}
+      {...props}
+    />
+  );
 };
 
 const Scene = () => {
@@ -19,30 +33,32 @@ const Scene = () => {
   const { scrollYProgress } = useScroll();
 
   scrollYProgress.onChange((value) => {
-    camera.position.set(0, -value * 20, 5);
+    camera.position.set(0, -value * FOV, 5);
   });
 
   return (
     <>
       <ambientLight intensity={0.1} />
-      <directionalLight color="red" position={[0, 0, 5]} />
-      <motion.mesh
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        position={[0, 0, 0]}
-      >
-        <boxGeometry args={[5, 5, 1]} />
+      <directionalLight color="white" position={[0, 0, 5]} />
+      {/*FLOOR*/}
+      <motion.mesh position={[0, -2, ROOM_Z_POSITION]}>
+        <boxGeometry args={[ROOM_WIDTH, WALL_THICKNESS, ROOM_DEPTH]} />
         <meshStandardMaterial />
       </motion.mesh>
-      <motion.mesh
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        position={[0, -20, 0]}
-      >
-        <boxGeometry args={[5, 5, 1]} />
-        <meshStandardMaterial />
+      {/*WALLS*/}
+      <motion.mesh position={[-ROOM_WIDTH / 2, 0, ROOM_Z_POSITION]}>
+        <boxGeometry args={[WALL_THICKNESS, ROOM_HEIGHT, ROOM_DEPTH]} />
+        <meshStandardMaterial color={WALL_COLOUR} />
       </motion.mesh>
-      {/*<Model />*/}
+      <motion.mesh position={[ROOM_WIDTH / 2, 0, ROOM_Z_POSITION]}>
+        <boxGeometry args={[WALL_THICKNESS, ROOM_HEIGHT, ROOM_DEPTH]} />
+        <meshStandardMaterial color={WALL_COLOUR} />
+      </motion.mesh>
+      <motion.mesh position={[0, 0, -ROOM_DEPTH]}>
+        <boxGeometry args={[ROOM_WIDTH, ROOM_HEIGHT, WALL_THICKNESS]} />
+        <meshStandardMaterial color={WALL_COLOUR} />
+      </motion.mesh>
+      <Model />
     </>
   );
 };
@@ -57,10 +73,7 @@ const App = () => {
           </Suspense>
         </Canvas>
       </div>
-      <div id="html-container">
-        <h1>First Title</h1>
-        <h1>Second Title</h1>
-      </div>
+      <div id="html-container"></div>
     </>
   );
 };
