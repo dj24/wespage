@@ -1,5 +1,5 @@
 import ReactDOM from "react-dom/client";
-import { Suspense, useCallback, useEffect, useRef } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion-3d";
 import { useScroll, useTransform, useVelocity, useSpring } from "framer-motion";
 import { Canvas, useThree, useLoader, useFrame } from "@react-three/fiber";
@@ -21,6 +21,7 @@ import {
 } from "@react-three/drei";
 import * as THREE from "three";
 import { TextureLoader } from "three";
+import { getGPUTier } from "detect-gpu";
 
 const ROOM_WIDTH = 10;
 const ROOM_DEPTH = 5;
@@ -28,6 +29,33 @@ const ROOM_HEIGHT = 8;
 const WALL_THICKNESS = 0.25;
 const WALL_COLOUR = "red";
 const ROOM_Z_POSITION = -1;
+
+// const Model = (props) => {
+//   const ref = useRef<THREE.Scene>();
+//   useFrame((state) => {
+//     if (!ref.current) {
+//       return;
+//     }
+//     const t = state.clock.getElapsedTime();
+//     ref.current.rotation.y = t;
+//     ref.current.position.y = Math.sin(t) * 0.5;
+//   });
+//   const gltf = useLoader(GLTFLoader, "models/chair/scene.gltf");
+//
+//
+//   return (
+//     <RigidBody colliders="cuboid">
+//       <motion.primitive
+//         castShadow
+//         object={gltf.scene}
+//         rotation={[0, 3, 0]}
+//         position={[0, 0, 0]}
+//         scale={[1, 1, 1]}
+//         {...props}
+//       />
+//     </RigidBody>
+//   );
+// };
 
 const Model = (props) => {
   const ref = useRef<THREE.Scene>();
@@ -39,16 +67,8 @@ const Model = (props) => {
     ref.current.rotation.y = t;
     ref.current.position.y = Math.sin(t) * 0.5;
   });
-  const gltf = useLoader(GLTFLoader, "models/scene.gltf");
+  const gltf = useLoader(GLTFLoader, "models/chair/scene.gltf");
 
-  useEffect(() => {
-    // gltf.scene.children.forEach((mesh, i) => {
-    //   mesh.castShadow = true;
-    // });
-    // gltf.scene.castShadow = true;
-    // ref.current = gltf.scene;
-    // console.log({ gltf });
-  }, [gltf]);
 
   return (
     <RigidBody colliders="cuboid">
@@ -64,14 +84,24 @@ const Model = (props) => {
   );
 };
 
+const LightBulb = (props) => {
+  const gltf = useLoader(GLTFLoader, "models/bulb/scene.gltf");
+  return (
+      <motion.primitive
+        castShadow
+        object={gltf.scene}
+        rotation={[0, 3, 0]}
+        position={[0, 0, 0]}
+        scale={[.1, .1, .1]}
+        {...props}
+      />
+  );
+};
+
 const Scene = () => {
   const { scrollYProgress } = useScroll();
 
   const yPosition = useTransform(scrollYProgress, (latest) => latest * 5);
-
-  const yVelocity = useVelocity(yPosition);
-
-  yVelocity.onChange((value) => console.log(value));
 
   const ref = useCallback((node) => {
     if (!node) {
@@ -82,7 +112,7 @@ const Scene = () => {
 
   return (
     <Physics>
-      {/*<Debug />*/}
+      <Debug />
       <hemisphereLight intensity={0.45} />
       <spotLight
         angle={0.4}
@@ -123,16 +153,18 @@ const Scene = () => {
           position={[0, 0, ROOM_DEPTH / 2 + WALL_THICKNESS + ROOM_Z_POSITION]}
           size={[ROOM_WIDTH, ROOM_HEIGHT, WALL_THICKNESS]}
         />
+        <LightBulb/>
       </motion.group>
       {[...new Array(10)].map((i) => (
-        <RigidBody key={i} colliders="cuboid">
-          <mesh castShadow receiveShadow>
+        <RigidBody  colliders="cuboid">
+          <mesh key={i} castShadow receiveShadow>
             <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial color="red" />
+            <meshStandardMaterial color="blue" />
           </mesh>
         </RigidBody>
       ))}
-      <Model />
+      {/*<Model />*/}
+
     </Physics>
   );
 };
@@ -151,13 +183,14 @@ const Floor = ({ size, ...props }) => {
     <RigidBody ref={ref} colliders="cuboid" type="kinematicVelocity">
       <mesh castShadow receiveShadow {...props}>
         <boxGeometry args={size} />
-        <meshPhongMaterial
-          map={colorMap}
-          displacementMap={displacementMap}
-          normalMap={normalMap}
-          specularMap={glossMap}
-          // roughnessMap={roughnessMap}
-        />
+        {/*<meshPhongMaterial*/}
+        {/*  map={colorMap}*/}
+        {/*  displacementMap={displacementMap}*/}
+        {/*  normalMap={normalMap}*/}
+        {/*  specularMap={glossMap}*/}
+        {/*  // roughnessMap={roughnessMap}*/}
+        {/*/>*/}
+        <meshStandardMaterial color="green" />
       </mesh>
     </RigidBody>
   );
@@ -208,10 +241,16 @@ const Box = ({ size, transparent = false, ...props }) => {
 };
 
 const App = () => {
+  const [dpr, setDpr] = useState(0.5);
+  useEffect(() => {
+    getGPUTier().then(
+      ({ tier }) => tier > 1 && setDpr(window.devicePixelRatio)
+    );
+  },[])
   return (
     <>
       <div id="canvas-container">
-        <Canvas shadows dpr={1}>
+        <Canvas shadows dpr={dpr}>
           <Suspense fallback={null}>
             <Scene />
             {/*<OrbitControls />*/}
