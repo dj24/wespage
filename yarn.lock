@@ -1201,6 +1201,11 @@
   resolved "https://registry.yarnpkg.com/@dimforge/rapier3d-compat/-/rapier3d-compat-0.8.1.tgz#7918044ac6b47d30c4bea71b21b6fdadcbd95ac2"
   integrity sha512-D+Q7HR+qdMnXcb3ioqIl+TtLtag8A55fumO+LY9/0WTf2kX1xmFlpHJJNC9fpOza3pl5RYfeZW6K+5YQlEcptw==
 
+"@dimforge/rapier3d@^0.9.0":
+  version "0.9.0"
+  resolved "https://registry.yarnpkg.com/@dimforge/rapier3d/-/rapier3d-0.9.0.tgz#6a702e5e65066a13d87f8bccd9fa359a8cbc39eb"
+  integrity sha512-43O4/k5naF/oIwExpcjCMzVUCL39Gz7iutp/uAgRE4ifa7cIckdxSeJaNFv7iYY+57Q7nKDqlzZglPjE0hWM0w==
+
 "@emotion/is-prop-valid@^0.8.2":
   version "0.8.8"
   resolved "https://registry.yarnpkg.com/@emotion/is-prop-valid/-/is-prop-valid-0.8.8.tgz#db28b1c4368a259b60a97311d6a952d4fd01ac1a"

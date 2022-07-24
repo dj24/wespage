@@ -8,6 +8,8 @@ import {
   Physics,
   RapierRigidBody,
   RigidBody,
+  useImpulseJoint,
+  useRapier,
 } from "@react-three/rapier";
 
 import "./index.css";
@@ -20,7 +22,8 @@ import {
   useTexture,
 } from "@react-three/drei";
 import * as THREE from "three";
-import { TextureLoader } from "three";
+import * as RAPIER from "@dimforge/rapier3d-compat";
+import { Color, TextureLoader } from "three";
 import { getGPUTier } from "detect-gpu";
 
 const ROOM_WIDTH = 10;
@@ -30,71 +33,17 @@ const WALL_THICKNESS = 0.25;
 const WALL_COLOUR = "red";
 const ROOM_Z_POSITION = -1;
 
-// const Model = (props) => {
-//   const ref = useRef<THREE.Scene>();
-//   useFrame((state) => {
-//     if (!ref.current) {
-//       return;
-//     }
-//     const t = state.clock.getElapsedTime();
-//     ref.current.rotation.y = t;
-//     ref.current.position.y = Math.sin(t) * 0.5;
-//   });
-//   const gltf = useLoader(GLTFLoader, "models/chair/scene.gltf");
-//
-//
-//   return (
-//     <RigidBody colliders="cuboid">
-//       <motion.primitive
-//         castShadow
-//         object={gltf.scene}
-//         rotation={[0, 3, 0]}
-//         position={[0, 0, 0]}
-//         scale={[1, 1, 1]}
-//         {...props}
-//       />
-//     </RigidBody>
-//   );
-// };
-
-const Model = (props) => {
-  const ref = useRef<THREE.Scene>();
-  useFrame((state) => {
-    if (!ref.current) {
-      return;
-    }
-    const t = state.clock.getElapsedTime();
-    ref.current.rotation.y = t;
-    ref.current.position.y = Math.sin(t) * 0.5;
-  });
-  const gltf = useLoader(GLTFLoader, "models/chair/scene.gltf");
-
-
-  return (
-    <RigidBody colliders="cuboid">
-      <motion.primitive
-        castShadow
-        object={gltf.scene}
-        rotation={[0, 3, 0]}
-        position={[0, 0, 0]}
-        scale={[1, 1, 1]}
-        {...props}
-      />
-    </RigidBody>
-  );
-};
-
 const LightBulb = (props) => {
   const gltf = useLoader(GLTFLoader, "models/bulb/scene.gltf");
   return (
-      <motion.primitive
-        castShadow
-        object={gltf.scene}
-        rotation={[0, 3, 0]}
-        position={[0, 0, 0]}
-        scale={[.1, .1, .1]}
-        {...props}
-      />
+    <motion.primitive
+      castShadow
+      object={gltf.scene}
+      rotation={[0, 3, 0]}
+      position={[0, 0, 0]}
+      scale={[0.1, 0.1, 0.1]}
+      {...props}
+    />
   );
 };
 
@@ -153,19 +102,77 @@ const Scene = () => {
           position={[0, 0, ROOM_DEPTH / 2 + WALL_THICKNESS + ROOM_Z_POSITION]}
           size={[ROOM_WIDTH, ROOM_HEIGHT, WALL_THICKNESS]}
         />
-        <LightBulb/>
+        {/*<LightBulb />*/}
       </motion.group>
-      {[...new Array(10)].map((i) => (
-        <RigidBody  colliders="cuboid">
-          <mesh key={i} castShadow receiveShadow>
-            <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial color="blue" />
-          </mesh>
+      <Rope />
+    </Physics>
+  );
+};
+
+const ROPE_JOINTS = 5;
+const ROPE_SECTION_SIZE = [0.1, 0.5, 0.1];
+
+const Rope = () => {
+  const { world } = useRapier();
+  let ropeRigidbodies: RapierRigidBody[] = [];
+  const handleRef = (index: number) => (node) => {
+    ropeRigidbodies[index] = node;
+    if (ropeRigidbodies.length === ROPE_JOINTS) {
+      for (let i = 0; i < ROPE_JOINTS - 1; i++) {
+        let params = RAPIER.JointData.spherical(
+          { x: -0.1, y: 0, z: 0.0 },
+          { x: 0.0, y: 0.25, z: 0.0 }
+        );
+        world.createImpulseJoint(
+          params,
+          ropeRigidbodies[i],
+          ropeRigidbodies[i + 1]
+        );
+      }
+    }
+  };
+  console.log(new Color(255, 0, 0).getHexString());
+  return (
+    <>
+      {[...Array(ROPE_JOINTS).keys()].map((i) => (
+        <RigidBody
+          ref={handleRef(i)}
+          key={i}
+          colliders="cuboid"
+          type={i === 0 ? "kinematicPosition" : "dynamic"}
+        >
+          <motion.mesh castShadow receiveShadow position={[0, 1 - i * 0.5, 0]}>
+            <motion.boxGeometry
+              whileHover={{ scale: 2 }}
+              args={ROPE_SECTION_SIZE}
+            />
+            <meshStandardMaterial
+              color={new Color(255, 0, 0)
+                // .lerpHSL(new Color(0, 0, 255), i / ROPE_JOINTS)
+                .getHexString()}
+            />
+          </motion.mesh>
         </RigidBody>
       ))}
-      {/*<Model />*/}
+    </>
+  );
+};
 
-    </Physics>
+const Line = ({ from, to }: { from: RapierRigidBody; to: RapierRigidBody }) => {
+  const ref = useRef<THREE.Line>();
+
+  useFrame(() => {
+    if (ref.current) {
+      ref.current.geometry.setFromPoints(
+        [from, to].map((point) => new THREE.Vector3(...point))
+      );
+    }
+  });
+  return (
+    <line ref={ref}>
+      <bufferGeometry />
+      <lineBasicMaterial color="black" />
+    </line>
   );
 };
 
@@ -198,13 +205,7 @@ const Floor = ({ size, ...props }) => {
 
 const useScrollTranslate = () => {
   const ref = useRef<RapierRigidBody>();
-  const { scrollYProgress, scrollXProgress } = useScroll();
-
-  const smoothedX = useSpring(scrollXProgress, {
-    stiffness: 100,
-    damping: 20,
-    restDelta: 0.0001,
-  });
+  const { scrollYProgress } = useScroll();
 
   const smoothedY = useSpring(scrollYProgress, {
     stiffness: 100,
@@ -217,10 +218,6 @@ const useScrollTranslate = () => {
     ref.current.setTranslation(new THREE.Vector3(0, value * 8, 0), true);
   });
 
-  smoothedX.onChange((value) => {
-    if (!ref.current) return;
-    ref.current.setTranslation(new THREE.Vector3(value * 8, 0, 0), true);
-  });
   return ref;
 };
 
@@ -243,10 +240,14 @@ const Box = ({ size, transparent = false, ...props }) => {
 const App = () => {
   const [dpr, setDpr] = useState(0.5);
   useEffect(() => {
-    getGPUTier().then(
-      ({ tier }) => tier > 1 && setDpr(window.devicePixelRatio)
-    );
-  },[])
+    getGPUTier().then(({ tier }) => {
+      if (tier > 2) {
+        setDpr(window.devicePixelRatio);
+      } else if (tier > 1) {
+        setDpr(0.75);
+      }
+    });
+  }, []);
   return (
     <>
       <div id="canvas-container">
